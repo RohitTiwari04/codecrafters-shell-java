@@ -9,6 +9,9 @@ public class Main {
 
         Scanner scanner = new Scanner(System.in);
 
+        // Track current working directory manually
+        File currentDir = new File(System.getProperty("user.dir"));
+
         while (true) {
             // Prompt
             System.out.print("$ ");
@@ -19,7 +22,6 @@ public class Main {
             }
 
             String input = scanner.nextLine().trim();
-
             if (input.isEmpty()) {
                 continue;
             }
@@ -31,7 +33,26 @@ public class Main {
 
             // pwd builtin
             if (input.equals("pwd")) {
-                System.out.println(System.getProperty("user.dir"));
+                System.out.println(currentDir.getAbsolutePath());
+                continue;
+            }
+
+            // cd builtin (absolute paths only)
+            if (input.startsWith("cd ")) {
+                String path = input.substring(3);
+
+                if (path.startsWith("/")) {
+                    File newDir = new File(path);
+
+                    if (newDir.exists() && newDir.isDirectory()) {
+                        currentDir = newDir;
+                    } else {
+                        System.out.println("cd: " + path + ": No such file or directory");
+                    }
+                } else {
+                    // relative paths handled in later stages
+                    System.out.println("cd: " + path + ": No such file or directory");
+                }
                 continue;
             }
 
@@ -61,7 +82,7 @@ public class Main {
 
                 String cmd = input.substring(5);
 
-                if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type") || cmd.equals("pwd")) {
+                if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type") || cmd.equals("pwd") || cmd.equals("cd")) {
                     System.out.println(cmd + " is a shell builtin");
                     continue;
                 }
@@ -112,7 +133,7 @@ public class Main {
             }
 
             List<String> commandList = new ArrayList<>();
-            commandList.add(command); // important: argv[0] = command name
+            commandList.add(command);
 
             for (int i = 1; i < parts.length; i++) {
                 commandList.add(parts[i]);
@@ -120,6 +141,7 @@ public class Main {
 
             try {
                 ProcessBuilder pb = new ProcessBuilder(commandList);
+                pb.directory(currentDir); // IMPORTANT
                 pb.inheritIO();
                 Process process = pb.start();
                 process.waitFor();
