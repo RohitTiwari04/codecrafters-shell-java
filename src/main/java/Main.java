@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -115,35 +116,41 @@ public class Main {
                 continue;
             }
 
-            // Parse arguments
-            List<String> parts = parseArguments(input);
+            // Parse tokens
+            List<String> tokens = parseArguments(input);
 
-            // ---------- Handle output redirection ----------
-            File redirectFile = null;
-            for (int i = 0; i < parts.size(); i++) {
-                if (parts.get(i).equals(">") || parts.get(i).equals("1>")) {
-                    if (i + 1 < parts.size()) {
-                        redirectFile = new File(parts.get(i + 1));
-                        parts = new ArrayList<>(parts.subList(0, i));
-                    }
-                    break;
+            File stdoutRedirect = null;
+            File stderrRedirect = null;
+
+            List<String> commandParts = new ArrayList<>();
+
+            for (int i = 0; i < tokens.size(); i++) {
+                String t = tokens.get(i);
+
+                if ((t.equals(">") || t.equals("1>")) && i + 1 < tokens.size()) {
+                    stdoutRedirect = new File(tokens.get(i + 1));
+                    i++;
+                } else if (t.equals("2>") && i + 1 < tokens.size()) {
+                    stderrRedirect = new File(tokens.get(i + 1));
+                    i++;
+                } else {
+                    commandParts.add(t);
                 }
             }
 
+            if (commandParts.isEmpty()) continue;
+
             // echo (builtin)
-            if (parts.get(0).equals("echo")) {
+            if (commandParts.get(0).equals("echo")) {
                 StringBuilder out = new StringBuilder();
-                for (int i = 1; i < parts.size(); i++) {
+                for (int i = 1; i < commandParts.size(); i++) {
                     if (i > 1) out.append(" ");
-                    out.append(parts.get(i));
+                    out.append(commandParts.get(i));
                 }
                 out.append("\n");
 
-                if (redirectFile != null) {
-                    java.nio.file.Files.write(
-                        redirectFile.toPath(),
-                        out.toString().getBytes()
-                    );
+                if (stdoutRedirect != null) {
+                    Files.write(stdoutRedirect.toPath(), out.toString().getBytes());
                 } else {
                     System.out.print(out.toString());
                 }
@@ -151,13 +158,13 @@ public class Main {
             }
 
             // type builtin
-            if (parts.get(0).equals("type")) {
-                if (parts.size() == 1) {
+            if (commandParts.get(0).equals("type")) {
+                if (commandParts.size() == 1) {
                     System.out.println("type is a shell builtin");
                     continue;
                 }
 
-                String cmd = parts.get(1);
+                String cmd = commandParts.get(1);
                 if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type")
                         || cmd.equals("pwd") || cmd.equals("cd")) {
                     System.out.println(cmd + " is a shell builtin");
@@ -182,7 +189,7 @@ public class Main {
             }
 
             // ---------- External command ----------
-            String command = parts.get(0);
+            String command = commandParts.get(0);
             boolean found = false;
             String pathEnv = System.getenv("PATH");
 
@@ -201,14 +208,19 @@ public class Main {
                 continue;
             }
 
-            ProcessBuilder pb = new ProcessBuilder(parts);
+            ProcessBuilder pb = new ProcessBuilder(commandParts);
             pb.directory(currentDir);
-            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
 
-            if (redirectFile != null) {
-                pb.redirectOutput(redirectFile);
+            if (stdoutRedirect != null) {
+                pb.redirectOutput(stdoutRedirect);
             } else {
-                pb.inheritIO();
+                pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            }
+
+            if (stderrRedirect != null) {
+                pb.redirectError(stderrRedirect);
+            } else {
+                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
 
             pb.start().waitFor();
