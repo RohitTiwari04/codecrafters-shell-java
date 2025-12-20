@@ -1,4 +1,7 @@
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -17,6 +20,10 @@ public class Main {
 
             String input = scanner.nextLine().trim();
 
+            if (input.isEmpty()) {
+                continue;
+            }
+
             // exit builtin
             if (input.equals("exit")) {
                 break;
@@ -34,7 +41,7 @@ public class Main {
                 continue;
             }
 
-            // type builtin (extended)
+            // type builtin
             if (input.startsWith("type")) {
                 if (input.equals("type")) {
                     System.out.println("type is a shell builtin");
@@ -48,22 +55,18 @@ public class Main {
 
                 String cmd = input.substring(5);
 
-                // Step 1: builtin check
                 if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type")) {
                     System.out.println(cmd + " is a shell builtin");
                     continue;
                 }
 
-                // Step 2: search PATH
                 boolean found = false;
                 String pathEnv = System.getenv("PATH");
 
                 if (pathEnv != null) {
                     String[] paths = pathEnv.split(File.pathSeparator);
-
                     for (String dir : paths) {
                         File file = new File(dir, cmd);
-
                         if (file.exists() && file.isFile() && file.canExecute()) {
                             System.out.println(cmd + " is " + file.getAbsolutePath());
                             found = true;
@@ -72,16 +75,51 @@ public class Main {
                     }
                 }
 
-                // Step 3: not found
                 if (!found) {
                     System.out.println(cmd + ": not found");
                 }
-
                 continue;
             }
 
-            // invalid command
-            System.out.println(input + ": command not found");
+            // -------- External command execution --------
+
+            String[] parts = input.split("\\s+");
+            String command = parts[0];
+
+            String executablePath = null;
+            String pathEnv = System.getenv("PATH");
+
+            if (pathEnv != null) {
+                String[] paths = pathEnv.split(File.pathSeparator);
+                for (String dir : paths) {
+                    File file = new File(dir, command);
+                    if (file.exists() && file.isFile() && file.canExecute()) {
+                        executablePath = file.getAbsolutePath();
+                        break;
+                    }
+                }
+            }
+
+            if (executablePath == null) {
+                System.out.println(command + ": command not found");
+                continue;
+            }
+
+            // Build command with arguments
+            List<String> commandList = new ArrayList<>();
+            commandList.add(executablePath);
+            for (int i = 1; i < parts.length; i++) {
+                commandList.add(parts[i]);
+            }
+
+            try {
+                ProcessBuilder pb = new ProcessBuilder(commandList);
+                pb.inheritIO(); // show program output directly
+                Process process = pb.start();
+                process.waitFor();
+            } catch (IOException e) {
+                System.out.println(command + ": command not found");
+            }
         }
     }
 }
