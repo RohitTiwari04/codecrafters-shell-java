@@ -83,10 +83,13 @@ public class Main {
 
             // -------- External command execution --------
 
+            // -------- External command execution --------
+
             String[] parts = input.split("\\s+");
             String command = parts[0];
 
-            String executablePath = null;
+            // Search PATH to verify executable exists
+            boolean found = false;
             String pathEnv = System.getenv("PATH");
 
             if (pathEnv != null) {
@@ -94,20 +97,21 @@ public class Main {
                 for (String dir : paths) {
                     File file = new File(dir, command);
                     if (file.exists() && file.isFile() && file.canExecute()) {
-                        executablePath = file.getAbsolutePath();
+                        found = true;
                         break;
                     }
                 }
             }
 
-            if (executablePath == null) {
+            if (!found) {
                 System.out.println(command + ": command not found");
                 continue;
             }
 
-            // Build command with arguments
+            // Build command using command name (not full path)
             List<String> commandList = new ArrayList<>();
-            commandList.add(executablePath);
+            commandList.add(command); // ✅ argv[0] will be correct
+
             for (int i = 1; i < parts.length; i++) {
                 commandList.add(parts[i]);
             }
@@ -120,6 +124,7 @@ public class Main {
             } catch (IOException e) {
                 System.out.println(command + ": command not found");
             }
+
         }
     }
 }
