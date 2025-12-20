@@ -122,7 +122,9 @@ public class Main {
 
             File stdoutRedirect = null;
             boolean stdoutAppend = false;
+
             File stderrRedirect = null;
+            boolean stderrAppend = false;
 
             List<String> commandParts = new ArrayList<>();
 
@@ -139,6 +141,11 @@ public class Main {
                     i++;
                 } else if (t.equals("2>") && i + 1 < tokens.size()) {
                     stderrRedirect = new File(tokens.get(i + 1));
+                    stderrAppend = false;
+                    i++;
+                } else if (t.equals("2>>") && i + 1 < tokens.size()) {
+                    stderrRedirect = new File(tokens.get(i + 1));
+                    stderrAppend = true;
                     i++;
                 } else {
                     commandParts.add(t);
@@ -156,6 +163,7 @@ public class Main {
                 }
                 out.append("\n");
 
+                // stdout
                 if (stdoutRedirect != null) {
                     if (stdoutAppend) {
                         Files.write(
@@ -171,9 +179,18 @@ public class Main {
                     System.out.print(out.toString());
                 }
 
-                // Create stderr file if redirected (even if unused)
+                // stderr file handling (even if unused)
                 if (stderrRedirect != null) {
-                    Files.write(stderrRedirect.toPath(), new byte[0]);
+                    if (stderrAppend) {
+                        Files.write(
+                                stderrRedirect.toPath(),
+                                new byte[0],
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.APPEND
+                        );
+                    } else {
+                        Files.write(stderrRedirect.toPath(), new byte[0]);
+                    }
                 }
 
                 continue;
@@ -248,7 +265,11 @@ public class Main {
 
             // stderr
             if (stderrRedirect != null) {
-                pb.redirectError(stderrRedirect);
+                if (stderrAppend) {
+                    pb.redirectError(ProcessBuilder.Redirect.appendTo(stderrRedirect));
+                } else {
+                    pb.redirectError(stderrRedirect);
+                }
             } else {
                 pb.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
