@@ -6,7 +6,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser with quotes + backslash support ----------
+    // ---------- Argument parser: quotes + backslashes ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -24,8 +24,24 @@ public class Main {
                 continue;
             }
 
-            if (c == '\\' && !inSingleQuote && !inDoubleQuote) {
-                escaping = true;
+            if (c == '\\') {
+                if (inSingleQuote) {
+                    current.append(c);
+                } else if (inDoubleQuote) {
+                    if (i + 1 < input.length()) {
+                        char next = input.charAt(i + 1);
+                        if (next == '"' || next == '\\') {
+                            current.append(next);
+                            i++;
+                        } else {
+                            current.append(c);
+                        }
+                    } else {
+                        current.append(c);
+                    }
+                } else {
+                    escaping = true;
+                }
                 continue;
             }
 
@@ -89,7 +105,6 @@ public class Main {
 
                 try {
                     if (newDir != null) newDir = newDir.getCanonicalFile();
-
                     if (newDir != null && newDir.exists() && newDir.isDirectory()) {
                         currentDir = newDir;
                     } else {
@@ -104,7 +119,6 @@ public class Main {
             // echo
             if (input.startsWith("echo")) {
                 List<String> parts = parseArguments(input);
-
                 if (parts.size() == 1) {
                     System.out.println();
                 } else {
@@ -120,14 +134,12 @@ public class Main {
             // type
             if (input.startsWith("type")) {
                 List<String> parts = parseArguments(input);
-
                 if (parts.size() == 1) {
                     System.out.println("type is a shell builtin");
                     continue;
                 }
 
                 String cmd = parts.get(1);
-
                 if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type")
                         || cmd.equals("pwd") || cmd.equals("cd")) {
                     System.out.println(cmd + " is a shell builtin");
@@ -136,7 +148,6 @@ public class Main {
 
                 boolean found = false;
                 String pathEnv = System.getenv("PATH");
-
                 if (pathEnv != null) {
                     for (String dir : pathEnv.split(File.pathSeparator)) {
                         File f = new File(dir, cmd);
@@ -152,13 +163,12 @@ public class Main {
                 continue;
             }
 
-            // ---------- External command ----------
+            // external command
             List<String> parts = parseArguments(input);
             String command = parts.get(0);
 
             boolean found = false;
             String pathEnv = System.getenv("PATH");
-
             if (pathEnv != null) {
                 for (String dir : pathEnv.split(File.pathSeparator)) {
                     File f = new File(dir, command);
@@ -174,14 +184,10 @@ public class Main {
                 continue;
             }
 
-            try {
-                ProcessBuilder pb = new ProcessBuilder(parts);
-                pb.directory(currentDir);
-                pb.inheritIO();
-                pb.start().waitFor();
-            } catch (IOException e) {
-                System.out.println(command + ": command not found");
-            }
+            ProcessBuilder pb = new ProcessBuilder(parts);
+            pb.directory(currentDir);
+            pb.inheritIO();
+            pb.start().waitFor();
         }
     }
 }
