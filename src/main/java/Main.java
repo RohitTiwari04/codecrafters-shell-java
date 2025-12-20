@@ -6,7 +6,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser (quotes + backslashes) ----------
+    // ---------- Argument parser ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -92,11 +92,10 @@ public class Main {
             // cd
             if (input.startsWith("cd ")) {
                 String path = input.substring(3);
-                File newDir = null;
+                File newDir;
 
                 if (path.equals("~")) {
-                    String home = System.getenv("HOME");
-                    if (home != null) newDir = new File(home);
+                    newDir = new File(System.getenv("HOME"));
                 } else if (path.startsWith("/")) {
                     newDir = new File(path);
                 } else {
@@ -104,8 +103,8 @@ public class Main {
                 }
 
                 try {
-                    if (newDir != null) newDir = newDir.getCanonicalFile();
-                    if (newDir != null && newDir.exists() && newDir.isDirectory()) {
+                    newDir = newDir.getCanonicalFile();
+                    if (newDir.exists() && newDir.isDirectory()) {
                         currentDir = newDir;
                     } else {
                         System.out.println("cd: " + path + ": No such file or directory");
@@ -116,24 +115,43 @@ public class Main {
                 continue;
             }
 
-            // echo
-            if (input.startsWith("echo")) {
-                List<String> parts = parseArguments(input);
-                if (parts.size() == 1) {
-                    System.out.println();
-                } else {
-                    for (int i = 1; i < parts.size(); i++) {
-                        if (i > 1) System.out.print(" ");
-                        System.out.print(parts.get(i));
+            // Parse arguments
+            List<String> parts = parseArguments(input);
+
+            // ---------- Handle output redirection ----------
+            File redirectFile = null;
+            for (int i = 0; i < parts.size(); i++) {
+                if (parts.get(i).equals(">") || parts.get(i).equals("1>")) {
+                    if (i + 1 < parts.size()) {
+                        redirectFile = new File(parts.get(i + 1));
+                        parts = new ArrayList<>(parts.subList(0, i));
                     }
-                    System.out.println();
+                    break;
+                }
+            }
+
+            // echo (builtin)
+            if (parts.get(0).equals("echo")) {
+                StringBuilder out = new StringBuilder();
+                for (int i = 1; i < parts.size(); i++) {
+                    if (i > 1) out.append(" ");
+                    out.append(parts.get(i));
+                }
+                out.append("\n");
+
+                if (redirectFile != null) {
+                    java.nio.file.Files.write(
+                        redirectFile.toPath(),
+                        out.toString().getBytes()
+                    );
+                } else {
+                    System.out.print(out.toString());
                 }
                 continue;
             }
 
-            // type
-            if (input.startsWith("type")) {
-                List<String> parts = parseArguments(input);
+            // type builtin
+            if (parts.get(0).equals("type")) {
                 if (parts.size() == 1) {
                     System.out.println("type is a shell builtin");
                     continue;
@@ -163,12 +181,11 @@ public class Main {
                 continue;
             }
 
-            // ---------- External command (quoted executable supported) ----------
-            List<String> parts = parseArguments(input);
+            // ---------- External command ----------
             String command = parts.get(0);
-
             boolean found = false;
             String pathEnv = System.getenv("PATH");
+
             if (pathEnv != null) {
                 for (String dir : pathEnv.split(File.pathSeparator)) {
                     File f = new File(dir, command);
@@ -186,7 +203,14 @@ public class Main {
 
             ProcessBuilder pb = new ProcessBuilder(parts);
             pb.directory(currentDir);
-            pb.inheritIO();
+            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+
+            if (redirectFile != null) {
+                pb.redirectOutput(redirectFile);
+            } else {
+                pb.inheritIO();
+            }
+
             pb.start().waitFor();
         }
     }
