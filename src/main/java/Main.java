@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -120,7 +121,9 @@ public class Main {
             List<String> tokens = parseArguments(input);
 
             File stdoutRedirect = null;
+            boolean stdoutAppend = false;
             File stderrRedirect = null;
+
             List<String> commandParts = new ArrayList<>();
 
             for (int i = 0; i < tokens.size(); i++) {
@@ -128,6 +131,11 @@ public class Main {
 
                 if ((t.equals(">") || t.equals("1>")) && i + 1 < tokens.size()) {
                     stdoutRedirect = new File(tokens.get(i + 1));
+                    stdoutAppend = false;
+                    i++;
+                } else if ((t.equals(">>") || t.equals("1>>")) && i + 1 < tokens.size()) {
+                    stdoutRedirect = new File(tokens.get(i + 1));
+                    stdoutAppend = true;
                     i++;
                 } else if (t.equals("2>") && i + 1 < tokens.size()) {
                     stderrRedirect = new File(tokens.get(i + 1));
@@ -148,14 +156,22 @@ public class Main {
                 }
                 out.append("\n");
 
-                // stdout
                 if (stdoutRedirect != null) {
-                    Files.write(stdoutRedirect.toPath(), out.toString().getBytes());
+                    if (stdoutAppend) {
+                        Files.write(
+                                stdoutRedirect.toPath(),
+                                out.toString().getBytes(),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.APPEND
+                        );
+                    } else {
+                        Files.write(stdoutRedirect.toPath(), out.toString().getBytes());
+                    }
                 } else {
                     System.out.print(out.toString());
                 }
 
-                // IMPORTANT: create stderr file even if unused
+                // Create stderr file if redirected (even if unused)
                 if (stderrRedirect != null) {
                     Files.write(stderrRedirect.toPath(), new byte[0]);
                 }
@@ -221,7 +237,11 @@ public class Main {
 
             // stdout
             if (stdoutRedirect != null) {
-                pb.redirectOutput(stdoutRedirect);
+                if (stdoutAppend) {
+                    pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdoutRedirect));
+                } else {
+                    pb.redirectOutput(stdoutRedirect);
+                }
             } else {
                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
