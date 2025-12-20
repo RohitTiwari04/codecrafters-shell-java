@@ -23,15 +23,30 @@ public class Main {
 
             // echo builtin
             if (input.startsWith("echo")) {
-                // If input is exactly "echo"
                 if (input.length() == 4) {
                     System.out.println();
                 } else if (input.charAt(4) == ' ') {
-                    // Print everything after "echo "
                     System.out.println(input.substring(5));
                 } else {
-                    // e.g. "echoXYZ" -> invalid command
                     System.out.println(input + ": command not found");
+                }
+                continue;
+            }
+
+            // type builtin
+            if (input.startsWith("type")) {
+                if (input.equals("type")) {
+                    System.out.println("type is a shell builtin");
+                } else if (input.charAt(4) == ' ') {
+                    String cmd = input.substring(5);
+
+                    if (cmd.equals("echo") || cmd.equals("exit") || cmd.equals("type")) {
+                        System.out.println(cmd + " is a shell builtin");
+                    } else {
+                        System.out.println(cmd + ": not found");
+                    }
+                } else {
+                    System.out.println(input + ": not found");
                 }
                 continue;
             }
