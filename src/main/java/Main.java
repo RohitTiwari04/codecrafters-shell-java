@@ -29,6 +29,12 @@ public class Main {
                 break;
             }
 
+            // pwd builtin
+            if (input.equals("pwd")) {
+                System.out.println(System.getProperty("user.dir"));
+                continue;
+            }
+
             // echo builtin
             if (input.startsWith("echo")) {
                 if (input.length() == 4) {
@@ -55,7 +61,7 @@ public class Main {
 
                 String cmd = input.substring(5);
 
-                if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type")) {
+                if (cmd.equals("exit") || cmd.equals("echo") || cmd.equals("type") || cmd.equals("pwd")) {
                     System.out.println(cmd + " is a shell builtin");
                     continue;
                 }
@@ -83,12 +89,9 @@ public class Main {
 
             // -------- External command execution --------
 
-            // -------- External command execution --------
-
             String[] parts = input.split("\\s+");
             String command = parts[0];
 
-            // Search PATH to verify executable exists
             boolean found = false;
             String pathEnv = System.getenv("PATH");
 
@@ -108,9 +111,8 @@ public class Main {
                 continue;
             }
 
-            // Build command using command name (not full path)
             List<String> commandList = new ArrayList<>();
-            commandList.add(command); // ✅ argv[0] will be correct
+            commandList.add(command); // important: argv[0] = command name
 
             for (int i = 1; i < parts.length; i++) {
                 commandList.add(parts[i]);
@@ -118,13 +120,12 @@ public class Main {
 
             try {
                 ProcessBuilder pb = new ProcessBuilder(commandList);
-                pb.inheritIO(); // show program output directly
+                pb.inheritIO();
                 Process process = pb.start();
                 process.waitFor();
             } catch (IOException e) {
                 System.out.println(command + ": command not found");
             }
-
         }
     }
 }
