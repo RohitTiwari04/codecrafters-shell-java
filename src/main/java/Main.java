@@ -6,6 +6,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
+            // Print prompt
             System.out.print("$ ");
             System.out.flush();
 
@@ -14,6 +15,13 @@ public class Main {
             }
 
             String input = scanner.nextLine().trim();
+
+            // exit builtin
+            if (input.equals("exit")) {
+                break; // terminate shell
+            }
+
+            // invalid command
             System.out.println(input + ": command not found");
         }
     }
