@@ -6,7 +6,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser: quotes + backslashes ----------
+    // ---------- Argument parser (quotes + backslashes) ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -163,7 +163,7 @@ public class Main {
                 continue;
             }
 
-            // external command
+            // ---------- External command (quoted executable supported) ----------
             List<String> parts = parseArguments(input);
             String command = parts.get(0);
 
