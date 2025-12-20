@@ -8,7 +8,6 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         Scanner scanner = new Scanner(System.in);
-
         File currentDir = new File(System.getProperty("user.dir"));
 
         while (true) {
@@ -29,21 +28,28 @@ public class Main {
                 continue;
             }
 
-            // cd (absolute + relative)
+            // cd (absolute, relative, ~)
             if (input.startsWith("cd ")) {
                 String path = input.substring(3);
-                File newDir;
+                File newDir = null;
 
-                if (path.startsWith("/")) {
+                if (path.equals("~")) {
+                    String home = System.getenv("HOME");
+                    if (home != null) {
+                        newDir = new File(home);
+                    }
+                } else if (path.startsWith("/")) {
                     newDir = new File(path);
                 } else {
                     newDir = new File(currentDir, path);
                 }
 
                 try {
-                    newDir = newDir.getCanonicalFile();
+                    if (newDir != null) {
+                        newDir = newDir.getCanonicalFile();
+                    }
 
-                    if (newDir.exists() && newDir.isDirectory()) {
+                    if (newDir != null && newDir.exists() && newDir.isDirectory()) {
                         currentDir = newDir;
                     } else {
                         System.out.println("cd: " + path + ": No such file or directory");
