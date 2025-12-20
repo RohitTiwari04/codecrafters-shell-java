@@ -6,18 +6,22 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser with single-quote support ----------
+    // ---------- Argument parser with single & double quote support ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
+
         boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
 
-            if (c == '\'') {
+            if (c == '\'' && !inDoubleQuote) {
                 inSingleQuote = !inSingleQuote;
-            } else if (Character.isWhitespace(c) && !inSingleQuote) {
+            } else if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
                 if (current.length() > 0) {
                     args.add(current.toString());
                     current.setLength(0);
@@ -40,7 +44,6 @@ public class Main {
         File currentDir = new File(System.getProperty("user.dir"));
 
         while (true) {
-            // Prompt
             System.out.print("$ ");
             System.out.flush();
 
@@ -50,9 +53,7 @@ public class Main {
             if (input.isEmpty()) continue;
 
             // exit
-            if (input.equals("exit")) {
-                break;
-            }
+            if (input.equals("exit")) break;
 
             // pwd
             if (input.equals("pwd")) {
@@ -67,9 +68,7 @@ public class Main {
 
                 if (path.equals("~")) {
                     String home = System.getenv("HOME");
-                    if (home != null) {
-                        newDir = new File(home);
-                    }
+                    if (home != null) newDir = new File(home);
                 } else if (path.startsWith("/")) {
                     newDir = new File(path);
                 } else {
@@ -77,9 +76,7 @@ public class Main {
                 }
 
                 try {
-                    if (newDir != null) {
-                        newDir = newDir.getCanonicalFile();
-                    }
+                    if (newDir != null) newDir = newDir.getCanonicalFile();
 
                     if (newDir != null && newDir.exists() && newDir.isDirectory()) {
                         currentDir = newDir;
@@ -92,7 +89,7 @@ public class Main {
                 continue;
             }
 
-            // echo (with quote support)
+            // echo (quote-aware)
             if (input.startsWith("echo")) {
                 List<String> parts = parseArguments(input);
 
@@ -139,9 +136,7 @@ public class Main {
                     }
                 }
 
-                if (!found) {
-                    System.out.println(cmd + ": not found");
-                }
+                if (!found) System.out.println(cmd + ": not found");
                 continue;
             }
 
