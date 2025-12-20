@@ -6,16 +6,28 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser with single & double quote support ----------
+    // ---------- Argument parser with quotes + backslash support ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
 
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
+        boolean escaping = false;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
+
+            if (escaping) {
+                current.append(c);
+                escaping = false;
+                continue;
+            }
+
+            if (c == '\\' && !inSingleQuote && !inDoubleQuote) {
+                escaping = true;
+                continue;
+            }
 
             if (c == '\'' && !inDoubleQuote) {
                 inSingleQuote = !inSingleQuote;
@@ -61,7 +73,7 @@ public class Main {
                 continue;
             }
 
-            // cd (absolute, relative, ~)
+            // cd
             if (input.startsWith("cd ")) {
                 String path = input.substring(3);
                 File newDir = null;
@@ -89,7 +101,7 @@ public class Main {
                 continue;
             }
 
-            // echo (quote-aware)
+            // echo
             if (input.startsWith("echo")) {
                 List<String> parts = parseArguments(input);
 
@@ -105,7 +117,7 @@ public class Main {
                 continue;
             }
 
-            // type builtin
+            // type
             if (input.startsWith("type")) {
                 List<String> parts = parseArguments(input);
 
@@ -140,7 +152,7 @@ public class Main {
                 continue;
             }
 
-            // ---------- External command execution ----------
+            // ---------- External command ----------
             List<String> parts = parseArguments(input);
             String command = parts.get(0);
 
