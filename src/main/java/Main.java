@@ -7,7 +7,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    // ---------- Argument parser ----------
+    // ---------- Argument parser (quotes + backslashes) ----------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -116,12 +116,11 @@ public class Main {
                 continue;
             }
 
-            // Parse tokens
+            // ---------- Parse tokens ----------
             List<String> tokens = parseArguments(input);
 
             File stdoutRedirect = null;
             File stderrRedirect = null;
-
             List<String> commandParts = new ArrayList<>();
 
             for (int i = 0; i < tokens.size(); i++) {
@@ -140,7 +139,7 @@ public class Main {
 
             if (commandParts.isEmpty()) continue;
 
-            // echo (builtin)
+            // ---------- echo builtin ----------
             if (commandParts.get(0).equals("echo")) {
                 StringBuilder out = new StringBuilder();
                 for (int i = 1; i < commandParts.size(); i++) {
@@ -149,15 +148,22 @@ public class Main {
                 }
                 out.append("\n");
 
+                // stdout
                 if (stdoutRedirect != null) {
                     Files.write(stdoutRedirect.toPath(), out.toString().getBytes());
                 } else {
                     System.out.print(out.toString());
                 }
+
+                // IMPORTANT: create stderr file even if unused
+                if (stderrRedirect != null) {
+                    Files.write(stderrRedirect.toPath(), new byte[0]);
+                }
+
                 continue;
             }
 
-            // type builtin
+            // ---------- type builtin ----------
             if (commandParts.get(0).equals("type")) {
                 if (commandParts.size() == 1) {
                     System.out.println("type is a shell builtin");
@@ -184,7 +190,9 @@ public class Main {
                     }
                 }
 
-                if (!found) System.out.println(cmd + ": not found");
+                if (!found) {
+                    System.out.println(cmd + ": not found");
+                }
                 continue;
             }
 
@@ -211,12 +219,14 @@ public class Main {
             ProcessBuilder pb = new ProcessBuilder(commandParts);
             pb.directory(currentDir);
 
+            // stdout
             if (stdoutRedirect != null) {
                 pb.redirectOutput(stdoutRedirect);
             } else {
                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
 
+            // stderr
             if (stderrRedirect != null) {
                 pb.redirectError(stderrRedirect);
             } else {
