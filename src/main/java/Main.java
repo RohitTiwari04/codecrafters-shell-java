@@ -98,18 +98,18 @@ public class Main {
                 continue;
             }
 
-            // TAB AUTOCOMPLETE
+            // TAB AUTOCOMPLETE (FIXED)
             if (ch == '\t') {
                 String cur = buffer.toString();
 
                 if ("echo".startsWith(cur)) {
                     buffer.setLength(0);
                     buffer.append("echo ");
-                    System.out.print("\r$ echo ");
+                    System.out.print("\r\033[2K$ echo ");
                 } else if ("exit".startsWith(cur)) {
                     buffer.setLength(0);
                     buffer.append("exit ");
-                    System.out.print("\r$ exit ");
+                    System.out.print("\r\033[2K$ exit ");
                 }
 
                 System.out.flush();
@@ -126,15 +126,18 @@ public class Main {
     // ================= COMMAND EXECUTION =================
     private static void executeCommand(String input) throws Exception {
 
+        // exit
         if (input.equals("exit")) {
             System.exit(0);
         }
 
+        // pwd
         if (input.equals("pwd")) {
             System.out.println(currentDir.getAbsolutePath());
             return;
         }
 
+        // cd
         if (input.startsWith("cd ")) {
             String path = input.substring(3);
             File newDir;
@@ -204,6 +207,7 @@ public class Main {
                 System.out.print(out);
             }
 
+            // stderr file creation if redirected
             if (stderr != null) {
                 if (stderrAppend) {
                     Files.write(stderr.toPath(), new byte[0],
@@ -233,7 +237,7 @@ public class Main {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(currentDir);
 
-        // stdout redirection
+        // stdout
         if (stdout != null) {
             if (stdoutAppend) {
                 pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdout));
@@ -244,7 +248,7 @@ public class Main {
             pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         }
 
-        // stderr redirection
+        // stderr
         if (stderr != null) {
             if (stderrAppend) {
                 pb.redirectError(ProcessBuilder.Redirect.appendTo(stderr));
