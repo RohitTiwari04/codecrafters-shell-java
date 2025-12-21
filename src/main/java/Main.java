@@ -8,7 +8,6 @@ import java.util.List;
 
 public class Main {
 
-    // Shared shell state
     static File currentDir;
 
     // ================= ARGUMENT PARSER =================
@@ -98,21 +97,24 @@ public class Main {
                 continue;
             }
 
-            // TAB AUTOCOMPLETE (FIXED)
+            // TAB AUTOCOMPLETE (Codecrafters-safe)
             if (ch == '\t') {
                 String cur = buffer.toString();
 
-                if ("echo".startsWith(cur)) {
-                    buffer.setLength(0);
-                    buffer.append("echo ");
-                    System.out.print("\r\033[2K$ echo ");
-                } else if ("exit".startsWith(cur)) {
-                    buffer.setLength(0);
-                    buffer.append("exit ");
-                    System.out.print("\r\033[2K$ exit ");
-                }
+                String completion = null;
+                if ("echo".startsWith(cur)) completion = "echo ";
+                else if ("exit".startsWith(cur)) completion = "exit ";
 
-                System.out.flush();
+                if (completion != null) {
+                    int len = buffer.length();
+                    for (int i = 0; i < len; i++) {
+                        System.out.print("\b \b");
+                    }
+                    buffer.setLength(0);
+                    buffer.append(completion);
+                    System.out.print(completion);
+                    System.out.flush();
+                }
                 continue;
             }
 
@@ -126,18 +128,15 @@ public class Main {
     // ================= COMMAND EXECUTION =================
     private static void executeCommand(String input) throws Exception {
 
-        // exit
         if (input.equals("exit")) {
             System.exit(0);
         }
 
-        // pwd
         if (input.equals("pwd")) {
             System.out.println(currentDir.getAbsolutePath());
             return;
         }
 
-        // cd
         if (input.startsWith("cd ")) {
             String path = input.substring(3);
             File newDir;
@@ -192,7 +191,6 @@ public class Main {
 
         if (cmd.isEmpty()) return;
 
-        // echo builtin
         if (cmd.get(0).equals("echo")) {
             String out = String.join(" ", cmd.subList(1, cmd.size())) + "\n";
 
@@ -206,20 +204,9 @@ public class Main {
             } else {
                 System.out.print(out);
             }
-
-            // stderr file creation if redirected
-            if (stderr != null) {
-                if (stderrAppend) {
-                    Files.write(stderr.toPath(), new byte[0],
-                            StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                } else {
-                    Files.write(stderr.toPath(), new byte[0]);
-                }
-            }
             return;
         }
 
-        // External command lookup
         boolean found = false;
         for (String dir : System.getenv("PATH").split(File.pathSeparator)) {
             File f = new File(dir, cmd.get(0));
@@ -237,26 +224,20 @@ public class Main {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(currentDir);
 
-        // stdout
         if (stdout != null) {
             if (stdoutAppend) {
                 pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdout));
             } else {
                 pb.redirectOutput(stdout);
             }
-        } else {
-            pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         }
 
-        // stderr
         if (stderr != null) {
             if (stderrAppend) {
                 pb.redirectError(ProcessBuilder.Redirect.appendTo(stderr));
             } else {
                 pb.redirectError(stderr);
             }
-        } else {
-            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
         }
 
         pb.start().waitFor();
