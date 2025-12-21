@@ -1,10 +1,14 @@
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
 
-    // Shared shell state (IMPORTANT FIX)
+    // Shared shell state
     static File currentDir;
 
     // ================= ARGUMENT PARSER =================
@@ -96,13 +100,13 @@ public class Main {
 
             // TAB AUTOCOMPLETE
             if (ch == '\t') {
-                String current = buffer.toString();
+                String cur = buffer.toString();
 
-                if ("echo".startsWith(current)) {
+                if ("echo".startsWith(cur)) {
                     buffer.setLength(0);
                     buffer.append("echo ");
                     System.out.print("\r$ echo ");
-                } else if ("exit".startsWith(current)) {
+                } else if ("exit".startsWith(cur)) {
                     buffer.setLength(0);
                     buffer.append("exit ");
                     System.out.print("\r$ exit ");
@@ -146,7 +150,7 @@ public class Main {
             try {
                 newDir = newDir.getCanonicalFile();
                 if (newDir.exists() && newDir.isDirectory()) {
-                    currentDir = newDir; // ✅ FIXED
+                    currentDir = newDir;
                 } else {
                     System.out.println("cd: " + path + ": No such file or directory");
                 }
@@ -211,7 +215,7 @@ public class Main {
             return;
         }
 
-        // External command
+        // External command lookup
         boolean found = false;
         for (String dir : System.getenv("PATH").split(File.pathSeparator)) {
             File f = new File(dir, cmd.get(0));
@@ -229,18 +233,24 @@ public class Main {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(currentDir);
 
+        // stdout redirection
         if (stdout != null) {
-            pb.redirectOutput(stdoutAppend
-                    ? ProcessBuilder.Redirect.appendTo(stdout)
-                    : stdout);
+            if (stdoutAppend) {
+                pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdout));
+            } else {
+                pb.redirectOutput(stdout);
+            }
         } else {
             pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         }
 
+        // stderr redirection
         if (stderr != null) {
-            pb.redirectError(stderrAppend
-                    ? ProcessBuilder.Redirect.appendTo(stderr)
-                    : stderr);
+            if (stderrAppend) {
+                pb.redirectError(ProcessBuilder.Redirect.appendTo(stderr));
+            } else {
+                pb.redirectError(stderr);
+            }
         } else {
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
         }
