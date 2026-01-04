@@ -10,7 +10,7 @@ public class Main {
 
     static File currentDir;
 
-    // ---------------- Argument parser ----------------
+    // ---------------- Argument Parser ----------------
     private static List<String> parseArguments(String input) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -98,18 +98,18 @@ public class Main {
                 continue;
             }
 
-            // TAB (Codecrafters-compatible)
+            // TAB AUTOCOMPLETE (QP2-CORRECT)
             if (ch == '\t') {
                 String cur = buffer.toString();
 
                 if ("echo".startsWith(cur)) {
-                    buffer.setLength(0);
-                    buffer.append("echo ");
-                    System.out.print("\n$ echo ");
+                    String suffix = "echo ".substring(cur.length());
+                    buffer.append(suffix);
+                    System.out.print(suffix);
                 } else if ("exit".startsWith(cur)) {
-                    buffer.setLength(0);
-                    buffer.append("exit ");
-                    System.out.print("\n$ exit ");
+                    String suffix = "exit ".substring(cur.length());
+                    buffer.append(suffix);
+                    System.out.print(suffix);
                 }
 
                 System.out.flush();
@@ -201,7 +201,7 @@ public class Main {
                 System.out.print(out);
             }
 
-            // stderr file creation (2>> or 2>)
+            // stderr file creation (2> / 2>>)
             if (stderr != null) {
                 if (errAppend) {
                     Files.write(stderr.toPath(), new byte[0],
@@ -231,26 +231,20 @@ public class Main {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(currentDir);
 
-        // stdout
         if (stdout != null) {
             if (outAppend) {
                 pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdout));
             } else {
                 pb.redirectOutput(stdout);
             }
-        } else {
-            pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         }
 
-        // stderr
         if (stderr != null) {
             if (errAppend) {
                 pb.redirectError(ProcessBuilder.Redirect.appendTo(stderr));
             } else {
                 pb.redirectError(stderr);
             }
-        } else {
-            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
         }
 
         pb.start().waitFor();
